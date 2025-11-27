@@ -52,25 +52,64 @@ export const Dashboard = ({ setView }: any) => {
     Object.values(dStats.variantMap).forEach((v: any) => { if(v.count > max) { max=v.count; topVar=v; }});
 
    const handleVoiceCommand = (qty: any, variantKey: any, delivery: any, addrWord: any) => {
+      // Find Product
+      // variantKey is likely a string "19" or "5". Match against product name.
+      const p = products.find(x => x.name.includes(String(variantKey)));
+      
+      if (!p) {
+          showToast(`Variant "${variantKey}" not found.`, "error");
+          speak("Product not found");
+          return;
+      }
+
+      // Calculate Total
+      const delAmt = Number(delivery) || 0;
+      const total = (p.price * Number(qty)) + delAmt;
+      const descDetails = `${qty}x ${p.name}` + (delAmt > 0 ? ` (+ Rs.${delAmt} Del)` : "");
+
       if (addrWord) {
-          const found = customers.find(c => c.address.toLowerCase().startsWith(addrWord.toLowerCase()));
+          // CREDIT MODE
+          // Search customer by address start
+          // Normalized address in utils removes spaces for search (e.g. "C204")
+          const searchKey = String(addrWord).toLowerCase();
+          const found = customers.find(c => {
+              // Simple check: does address start with the spoken identity?
+              // Clean customer address for comparison
+              const cAddrClean = c.address.replace(/\s+/g, '').toLowerCase();
+              return cAddrClean.startsWith(searchKey);
+          });
+
           if (found) {
-              const p = products.find(x => x.name.includes(variantKey));
-              if (p) {
-                  const t = (p.price * qty) + Number(delivery);
-                  recordSale({ saleType: "credit", product: p, quantity: qty, isDelivery: delivery>0, deliveryCharge: delivery, customerId: found.id, amount: t, description: `Voice Credit: ${qty}x ${p.name}` });
-                  showToast(`Credit Sale: ${qty}x ${p.name}`, "success");
-                  speak(`Recorded Credit Sale for ${found.name}`);
-              } else { showToast("Variant not found", "error"); }
-          } else { showToast("Address not found", "error"); }
+              recordSale({ 
+                  saleType: "credit", 
+                  product: p, 
+                  quantity: qty, 
+                  isDelivery: delAmt > 0, 
+                  deliveryCharge: delAmt, 
+                  customerId: found.id, 
+                  amount: total, 
+                  description: `Voice Credit: ${descDetails}` 
+              });
+              showToast(`Credit: ${qty}x ${p.name} to ${found.name}`, "success");
+              speak(`Credit sale recorded for ${found.name}`);
+          } else { 
+              showToast(`Address "${addrWord}" not found`, "error"); 
+              speak("Customer address not found");
+          }
       } else {
-          const p = products.find(x => x.name.includes(variantKey));
-          if (p) {
-              const t = (p.price * qty) + Number(delivery);
-              recordSale({ saleType: "cash", product: p, quantity: qty, isDelivery: delivery>0, deliveryCharge: delivery, customerId: null, amount: t, description: `Voice Cash: ${qty}x ${p.name}` });
-              showToast(`Cash Sale: ${qty}x ${p.name}`, "success");
-              speak(`Recorded Cash Sale`);
-          } else { showToast("Variant not found", "error"); }
+          // CASH MODE
+          recordSale({ 
+              saleType: "cash", 
+              product: p, 
+              quantity: qty, 
+              isDelivery: delAmt > 0, 
+              deliveryCharge: delAmt, 
+              customerId: null, 
+              amount: total, 
+              description: `Voice Cash: ${descDetails}` 
+          });
+          showToast(`Cash: ${qty}x ${p.name}`, "success");
+          speak(`Cash sale recorded. Total ${total}`);
       }
    };
 

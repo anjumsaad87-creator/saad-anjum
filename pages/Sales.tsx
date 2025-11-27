@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { formatCurrency } from '../utils';
+import { formatCurrency, speak } from '../utils';
 import { Card, Button, WhatsAppModal } from '../components/UI';
 import { VoiceButton } from '../components/VoiceButton';
 
@@ -20,25 +20,65 @@ export const NewSale = () => {
     const total = (product?.price || 0) * qty + (isDelivery ? Number(deliveryCharge) : 0);
 
     const handleVoice = (q: any, variantKey: any, del: any, addrWord: any) => {
+       const p = products.find(x => x.name.includes(String(variantKey)));
+       if (!p) {
+           showToast(`Variant "${variantKey}" not found`, "error");
+           speak("Product not found");
+           return;
+       }
+
+       const delAmt = Number(del) || 0;
+       const t = (p.price * Number(q)) + delAmt;
+       const desc = `${q}x ${p.name}` + (delAmt > 0 ? ` (+ Rs.${delAmt} Del)` : "");
+
        if (saleType === "credit") {
-           const found = customers.find(c => c.address.toLowerCase().startsWith(addrWord.toLowerCase()));
+           // addrWord is the identity (e.g. "C204")
+           if (!addrWord) {
+               showToast("Address identity required for credit", "error");
+               return;
+           }
+
+           const searchKey = String(addrWord).toLowerCase();
+           const found = customers.find(c => {
+              const cAddrClean = c.address.replace(/\s+/g, '').toLowerCase();
+              return cAddrClean.startsWith(searchKey);
+           });
+
            if (found) {
                setSelectedCustomer(found); setCustSearch(found.name);
-               const p = products.find(x => x.name.includes(variantKey));
-               if (p) {
-                   setProductId(p.id);
-                   const t = (p.price * q) + Number(del);
-                   recordSale({ saleType: "credit", product: p, quantity: q, isDelivery: del>0, deliveryCharge: del, customerId: found.id, amount: t, description: `Voice Credit: ${q}x ${p.name}` });
-                   setWaModal({ customerName: found.name, saleDetails: `${q}x ${p.name}`, total: formatCurrency(t), balance: formatCurrency((found.balance||0)+t) });
-               } else { showToast("Variant not found", "error"); }
-           } else { showToast("Address not found: " + addrWord, "error"); }
-       } else {
-           const p = products.find(x => x.name.includes(variantKey));
-           if(p) {
-               const t = (p.price * q) + Number(del);
-               recordSale({ saleType: "cash", product: p, quantity: q, isDelivery: del>0, deliveryCharge: del, customerId: null, amount: t, description: `Voice Cash: ${q}x ${p.name}` });
-               showToast("Sale Recorded", "success");
+               setProductId(p.id);
+               
+               recordSale({ 
+                   saleType: "credit", 
+                   product: p, 
+                   quantity: q, 
+                   isDelivery: delAmt>0, 
+                   deliveryCharge: delAmt, 
+                   customerId: found.id, 
+                   amount: t, 
+                   description: `Voice Credit: ${desc}` 
+               });
+               
+               setWaModal({ customerName: found.name, saleDetails: desc, total: formatCurrency(t), balance: formatCurrency((found.balance||0)+t) });
+               speak(`Credit recorded for ${found.name}`);
+           } else { 
+               showToast(`Address "${addrWord}" not found`, "error"); 
+               speak("Customer not found");
            }
+       } else {
+           // Cash
+           recordSale({ 
+               saleType: "cash", 
+               product: p, 
+               quantity: q, 
+               isDelivery: delAmt>0, 
+               deliveryCharge: delAmt, 
+               customerId: null, 
+               amount: t, 
+               description: `Voice Cash: ${desc}` 
+           });
+           showToast("Sale Recorded", "success");
+           speak("Cash sale recorded");
        }
     };
 

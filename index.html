@@ -49,23 +49,32 @@
       /* Date Inputs */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0); cursor: pointer; }
       
-      /* High Contrast Inputs (User Request) */
-      input, select, textarea {
+      /* High Contrast Inputs (User Request) - Forced Override */
+      input:not([type="checkbox"]), select, textarea {
         background-color: #ffffff !important;
         color: #000000 !important;
-        border: 1px solid #d1d5db;
+        border: 2px solid #d1d5db !important;
+        font-weight: 600 !important;
       }
       ::placeholder {
         color: #6b7280 !important;
+        font-weight: 400;
       }
       /* Ensure inputs stay light even in dark mode */
-      html.dark input, html.dark select, html.dark textarea {
+      html.dark input:not([type="checkbox"]), html.dark select, html.dark textarea {
         background-color: #ffffff !important;
         color: #000000 !important;
         border-color: #9ca3af !important;
       }
+      
+      /* Focus states */
+      input:focus, select:focus, textarea:focus {
+        border-color: #4f46e5 !important;
+        outline: 2px solid #4f46e5 !important;
+        outline-offset: 1px;
+      }
 
-      .big-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #4f46e5; }
+      .big-checkbox { width: 24px; height: 24px; cursor: pointer; accent-color: #4f46e5; }
     </style>
   <script type="importmap">
 {
