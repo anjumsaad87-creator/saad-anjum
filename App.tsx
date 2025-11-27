@@ -54,10 +54,10 @@ const App = () => {
              <button 
                key={item.id} 
                onClick={() => setView(item.id)} 
-               className={`flex flex-col items-center p-2 rounded-lg transition ${view === item.id ? "text-indigo-600 dark:text-indigo-400" : "text-gray-400"}`}
+               className={`flex flex-col items-center p-2 rounded-lg transition ${view === item.id ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-400"}`}
              >
                <Icon name={item.icon} size={20} />
-               <span className="text-[10px] mt-1 font-medium">{item.label}</span>
+               <span className="text-[10px] mt-1 font-bold">{item.label}</span>
              </button>
            ))}
          </nav>

@@ -36,20 +36,47 @@ export const TasksPage = () => {
     const handleSingleDone = (c: any) => {
         if(isDone(c.id)) return;
         const sched = c.schedule[dayName];
-        const p = products.find(x => x.name === sched.variant) || {id: 'unknown', price: 0, name: sched.variant || 'Water'};
-        const total = (Number(p.price || 0) * Number(sched.qty)) + Number(sched.delivery);
         
+        // Robust Product Lookup
+        let p = products.find(x => x.name === sched.variant);
+        if (!p) {
+             // Try case-insensitive match
+             p = products.find(x => x.name.toLowerCase() === (sched.variant || "").toLowerCase());
+        }
+
+        if (!p) {
+            showToast(`Product "${sched.variant}" not found. Update schedule or settings.`, "error");
+            return;
+        }
+
+        const qty = Number(sched.qty) || 0;
+        const delAmt = Number(sched.delivery) || 0;
+        const total = (p.price * qty) + delAmt;
+        
+        // Consistent Description with Sales Page
+        // "Credit Sale (Customer): 2x Product (+ Rs.X Del)"
+        const descDetails = `${qty}x ${p.name}` + (delAmt > 0 ? ` (+ Rs.${delAmt} Del)` : "");
+
         recordSale({
            saleType: "credit", 
            product: p, 
-           quantity: Number(sched.qty), 
-           isDelivery: Number(sched.delivery)>0, 
-           deliveryCharge: Number(sched.delivery),
+           quantity: qty, 
+           isDelivery: delAmt > 0, 
+           deliveryCharge: delAmt, 
            customerId: c.id, 
            amount: total, 
-           description: `Scheduled: ${sched.qty}x ${sched.variant}` 
+           description: descDetails // recordSale will prepend "Credit Sale (Name): "
         });
+        
         showToast(`Task Done: ${c.name}`, "success");
+
+        // TRIGGER WHATSAPP MODAL
+        setWaModal({ 
+            customerName: c.name, 
+            saleDetails: descDetails, 
+            total: formatCurrency(total), 
+            balance: formatCurrency((Number(c.balance)||0) + total) 
+        });
     };
 
     const handleBatchDone = () => {

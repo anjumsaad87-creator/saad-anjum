@@ -128,7 +128,7 @@ export const Dashboard = ({ setView }: any) => {
           </div>
           
           <div className="flex flex-col md:flex-row justify-center items-center gap-4 mb-6 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border dark:border-gray-700">
-              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border dark:border-gray-700">
+              <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border dark:border-gray-700 shadow-sm w-full md:w-auto justify-center">
                   <Icon name="calendar" size={18} className="text-indigo-500"/>
                   <input type="date" className="bg-transparent border-none text-sm font-bold text-gray-700 dark:text-gray-200 focus:outline-none" value={date} onChange={e=>setDate(e.target.value)} />
               </div>
@@ -137,28 +137,51 @@ export const Dashboard = ({ setView }: any) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <StatBox title={`Daily Collection (${date})`} value={formatCurrency(dStats.collection)} subtext="Cash In" colorBg="bg-emerald-50 dark:bg-emerald-950/40" colorText="text-emerald-600" icon={<Icon name="sun"/>} />
+             {/* Main Boxes with Beautiful Outline - Forced Styles with !important to ensure visibility */}
+             <StatBox 
+                title={`Daily Collection (${date})`} 
+                value={formatCurrency(dStats.collection)} 
+                subtext="Cash In" 
+                colorBg="bg-emerald-50 dark:bg-emerald-950/40" 
+                colorText="text-emerald-600" 
+                icon={<Icon name="sun"/>}
+                className="!border-2 !border-emerald-500 dark:!border-emerald-500 shadow-lg"
+             />
              
              <StatBox 
-                 title="Bottles Sold" 
+                 title={`Bottles Sold (${date})`}
                  value={dStats.bottles} 
-                 subtext={topVar ? "Best Seller Below" : "No Sales Yet"} 
+                 subtext="Top Sold Variant"
                  colorBg="bg-cyan-50 dark:bg-cyan-950/40" 
                  colorText="text-cyan-600" 
                  icon={<Icon name="package"/>} 
-                 extraContent={topVar && (
+                 className="!border-2 !border-cyan-500 dark:!border-cyan-500 shadow-lg"
+                 extraContent={
                      <div className="mt-2 pt-2 border-t border-cyan-200 dark:border-cyan-800">
-                         <p className="text-[10px] uppercase font-bold text-cyan-800 dark:text-cyan-200 mb-1">Top Selling Variant</p>
-                         <div className="flex justify-between items-end">
-                             <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{topVar.name}</p>
-                             <p className="text-xs font-bold text-cyan-600">{topVar.count}x</p>
-                         </div>
-                         <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">{formatCurrency(topVar.revenue)}</p>
+                         {topVar ? (
+                             <>
+                                 <div className="flex justify-between items-end">
+                                     <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{topVar.name}</p>
+                                     <p className="text-xs font-bold text-cyan-600">{topVar.count}x</p>
+                                 </div>
+                                 <p className="text-[10px] text-gray-500 dark:text-gray-400 text-right">{formatCurrency(topVar.revenue)}</p>
+                             </>
+                         ) : (
+                             <p className="text-[10px] text-gray-400 italic">None</p>
+                         )}
                      </div>
-                 )} 
+                 } 
              />
              
-             <StatBox title="Monthly Collection" value={formatCurrency(mStats.collection)} subtext="Total Inflow" colorBg="bg-blue-50 dark:bg-blue-950/40" colorText="text-blue-600" icon={<Icon name="calendar"/>} />
+             <StatBox 
+                title="Monthly Collection" 
+                value={formatCurrency(mStats.collection)} 
+                subtext="Total Inflow" 
+                colorBg="bg-blue-50 dark:bg-blue-950/40" 
+                colorText="text-blue-600" 
+                icon={<Icon name="calendar"/>}
+                className="!border-2 !border-blue-500 dark:!border-blue-500 shadow-lg"
+             />
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">

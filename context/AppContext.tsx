@@ -122,7 +122,9 @@ export const AppProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
       const txData = {
         ...data,
-        paymentMethod: saleType, // Explicitly map saleType to paymentMethod for consistency
+        productId: data.product?.id || data.productId, // Ensure productId is correctly saved
+        quantity: Number(data.quantity) || 0, // Ensure quantity is strictly a number
+        paymentMethod: saleType, 
         amount: finalAmt,
         description: desc,
         type: 'sale',
@@ -206,18 +208,25 @@ export const AppProvider = ({ children }: React.PropsWithChildren<{}>) => {
         }
       }
       if (t.type === 'sale') {
-        const qty = t.quantity || 0;
+        // SAFETY FIX: Ensure qty is parsed as a number to avoid string concatenation bugs
+        const qty = Number(t.quantity) || 0;
         dayStats[dKey].bottles += qty;
+        
         if (t.customerId) {
           if (!customerHistory[t.customerId]) customerHistory[t.customerId] = {};
           const pname = t.description.match(/x\s(.*?)\s\+/)?.[1] || t.description.split('x')[1] || "Item";
           customerHistory[t.customerId][pname] = (customerHistory[t.customerId][pname] || 0) + qty;
         }
-        if (t.productId) {
-          const vName = products.find(p => p.id === t.productId)?.name || "Unknown";
-          if (!dayStats[dKey].variantMap[t.productId]) dayStats[dKey].variantMap[t.productId] = { name: vName, count: 0, revenue: 0 };
-          dayStats[dKey].variantMap[t.productId].count += qty;
-          dayStats[dKey].variantMap[t.productId].revenue += amt;
+        
+        // Fix Top Variant Logic: Check productId AND nested product.id (legacy)
+        const pId = t.productId || (t as any).product?.id;
+        if (pId) {
+          // Try to get name from current product list, fallback to transaction snapshot if available
+          const vName = products.find(p => p.id === pId)?.name || (t as any).product?.name || "Unknown";
+          
+          if (!dayStats[dKey].variantMap[pId]) dayStats[dKey].variantMap[pId] = { name: vName, count: 0, revenue: 0 };
+          dayStats[dKey].variantMap[pId].count += qty;
+          dayStats[dKey].variantMap[pId].revenue += amt;
         }
       }
     });

@@ -1,8 +1,8 @@
 import React from 'react';
 import { Card } from './UI';
 
-export const StatBox = ({ title, value, subtext, colorBg, colorText, icon, extraContent, size="normal" }: any) => (
-    <Card className={colorBg + " border-l-4 " + colorText.replace("text", "border") + " relative overflow-hidden h-full flex flex-col justify-between stat-card dark:bg-gray-800 dark:border-opacity-70"}>
+export const StatBox = ({ title, value, subtext, colorBg, colorText, icon, extraContent, size="normal", className="" }: any) => (
+    <Card className={`${colorBg} border-l-4 ${colorText.replace("text", "border")} relative overflow-hidden h-full flex flex-col justify-between stat-card dark:bg-gray-800 dark:border-opacity-70 ${className}`}>
       <div className="flex justify-between items-start z-10 relative">
           <div className="w-full">
               <p className={`text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wide truncate pr-2 ${size === "small" ? "text-[10px]" : "text-xs"}`}>{title}</p>
