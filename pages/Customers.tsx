@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { exportToCSV, formatCurrency } from '../utils';
+import { exportToCSV, formatCurrency, filterCustomers } from '../utils';
 import { DAYS_OF_WEEK } from '../constants';
 import { Card, Button, Icon, ConfirmModal, WhatsAppModal } from '../components/UI';
 
@@ -60,19 +60,21 @@ export const Customers = () => {
        }
     };
 
+    const displayedCustomers = filterCustomers(customers, search);
+
     if (viewMode === "schedule") return <ScheduleEditor c={selectedC} onBack={()=>setViewMode("list")} />;
 
     return (
         <div className="pb-20 space-y-4 animate-fade-in">
             <div className="flex gap-2">
-               <input className="flex-1 p-2 border rounded" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} />
+               <input className="flex-1 p-2 border rounded" placeholder="Search by Name or Address ID (e.g. 340)" value={search} onChange={e=>setSearch(e.target.value)} />
                <Button onClick={handleExport} variant="outline"><Icon name="download"/></Button>
                <input type="file" ref={importInputRef} className="hidden" onChange={handleFileChange}/><Button onClick={()=>importInputRef.current.click()} variant="outline"><Icon name="upload"/></Button>
             </div>
             <Button onClick={()=>setShowAdd(!showAdd)} className="w-full">{showAdd?"Cancel":"Add Customer"}</Button>
-            {showAdd && <Card><div className="grid gap-2"><input placeholder="Name" value={formData.name} onChange={e=>setFormData({...formData, name:e.target.value})} className="border p-2 rounded"/><input placeholder="Phone" value={formData.phone} onChange={e=>setFormData({...formData, phone:e.target.value})} className="border p-2 rounded"/><input placeholder="Address" value={formData.address} onChange={e=>setFormData({...formData, address:e.target.value})} className="border p-2 rounded"/><Button onClick={()=>{addCustomer(formData.name, formData.phone, formData.address); setShowAdd(false);}}>Save</Button></div></Card>}
+            {showAdd && <Card><div className="grid gap-2"><input placeholder="Name" value={formData.name} onChange={e=>setFormData({...formData, name:e.target.value})} className="border p-2 rounded"/><input placeholder="Phone" value={formData.phone} onChange={e=>setFormData({...formData, phone:e.target.value})} className="border p-2 rounded"/><input placeholder="Address (Start with ID e.g. C340)" value={formData.address} onChange={e=>setFormData({...formData, address:e.target.value})} className="border p-2 rounded"/><Button onClick={()=>{addCustomer(formData.name, formData.phone, formData.address); setShowAdd(false);}}>Save</Button></div></Card>}
             
-            {customers.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())).map(c => {
+            {displayedCustomers.map(c => {
                const history = stats.customerHistory && stats.customerHistory[c.id] ? Object.entries(stats.customerHistory[c.id]).map(([k,v])=>`${v}x ${k}`).join(', ') : "No History";
                return (
                 <Card key={c.id}>
@@ -93,6 +95,8 @@ export const Customers = () => {
                     </div>
                 </Card>
             )})}
+            {displayedCustomers.length === 0 && <p className="text-center text-gray-500 mt-4">No customers found.</p>}
+            
             {collectModal.open && <div className="fixed inset-0 bg-black/60 flex justify-center items-center z-50"><div className="bg-white p-6 rounded"><h3 className="font-bold mb-4">Collect from {collectModal.customer.name}</h3><input type="number" value={collectModal.amount} onChange={e=>setCollectModal({...collectModal, amount:e.target.value})} className="border p-2 w-full mb-4" placeholder="Amount" /><div className="flex gap-2"><Button onClick={handleCollectionConfirm}>Confirm</Button><Button variant="outline" onClick={()=>setCollectModal({open:false, customer:null})}>Cancel</Button></div></div></div>}
             
             <WhatsAppModal isOpen={!!waModal} {...waModal} onCancel={()=>setWaModal(null)} />

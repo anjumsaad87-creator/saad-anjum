@@ -52,9 +52,8 @@ export const Dashboard = ({ setView }: any) => {
     Object.values(dStats.variantMap).forEach((v: any) => { if(v.count > max) { max=v.count; topVar=v; }});
 
    const handleVoiceCommand = (qty: any, variantKey: any, delivery: any, addrWord: any) => {
-      // Find Product
-      // variantKey is likely a string "19" or "5". Match against product name.
-      const p = products.find(x => x.name.includes(String(variantKey)));
+      // Find Product (Case Insensitive)
+      const p = products.find(x => x.name.toLowerCase().includes(String(variantKey).toLowerCase()));
       
       if (!p) {
           showToast(`Variant "${variantKey}" not found.`, "error");
@@ -62,21 +61,23 @@ export const Dashboard = ({ setView }: any) => {
           return;
       }
 
-      // Calculate Total
+      // Ensure delivery is number
       const delAmt = Number(delivery) || 0;
       const total = (p.price * Number(qty)) + delAmt;
       const descDetails = `${qty}x ${p.name}` + (delAmt > 0 ? ` (+ Rs.${delAmt} Del)` : "");
 
       if (addrWord) {
           // CREDIT MODE
-          // Search customer by address start
-          // Normalized address in utils removes spaces for search (e.g. "C204")
+          // Search customer by Address ID (Strict)
           const searchKey = String(addrWord).toLowerCase();
           const found = customers.find(c => {
-              // Simple check: does address start with the spoken identity?
-              // Clean customer address for comparison
-              const cAddrClean = c.address.replace(/\s+/g, '').toLowerCase();
-              return cAddrClean.startsWith(searchKey);
+              // Address ID matching logic (Same as findMatchingCustomer roughly)
+              const firstWord = c.address.trim().split(/\s+/)[0].toLowerCase();
+              const numericId = firstWord.replace(/\D/g, '');
+              
+              // If user said "340", match "c340" (via numericId) or "340"
+              // If user said "c340", match "c340"
+              return firstWord === searchKey || (numericId === searchKey && numericId.length > 0);
           });
 
           if (found) {
@@ -93,8 +94,8 @@ export const Dashboard = ({ setView }: any) => {
               showToast(`Credit: ${qty}x ${p.name} to ${found.name}`, "success");
               speak(`Credit sale recorded for ${found.name}`);
           } else { 
-              showToast(`Address "${addrWord}" not found`, "error"); 
-              speak("Customer address not found");
+              showToast(`Customer ID "${addrWord}" not found`, "error"); 
+              speak("Customer not found");
           }
       } else {
           // CASH MODE

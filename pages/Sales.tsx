@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { formatCurrency, speak } from '../utils';
+import { formatCurrency, speak, findMatchingCustomer } from '../utils';
 import { Card, Button, WhatsAppModal } from '../components/UI';
 import { VoiceButton } from '../components/VoiceButton';
 
@@ -20,7 +20,7 @@ export const NewSale = () => {
     const total = (product?.price || 0) * qty + (isDelivery ? Number(deliveryCharge) : 0);
 
     const handleVoice = (q: any, variantKey: any, del: any, addrWord: any) => {
-       const p = products.find(x => x.name.includes(String(variantKey)));
+       const p = products.find(x => x.name.toLowerCase().includes(String(variantKey).toLowerCase()));
        if (!p) {
            showToast(`Variant "${variantKey}" not found`, "error");
            speak("Product not found");
@@ -31,18 +31,9 @@ export const NewSale = () => {
        const t = (p.price * Number(q)) + delAmt;
        const desc = `${q}x ${p.name}` + (delAmt > 0 ? ` (+ Rs.${delAmt} Del)` : "");
 
-       if (saleType === "credit") {
-           // addrWord is the identity (e.g. "C204")
-           if (!addrWord) {
-               showToast("Address identity required for credit", "error");
-               return;
-           }
-
-           const searchKey = String(addrWord).toLowerCase();
-           const found = customers.find(c => {
-              const cAddrClean = c.address.replace(/\s+/g, '').toLowerCase();
-              return cAddrClean.startsWith(searchKey);
-           });
+       if (addrWord) {
+           // CREDIT LOGIC: addrWord is the ID (e.g. "340" or "C340")
+           const found = findMatchingCustomer(customers, String(addrWord));
 
            if (found) {
                setSelectedCustomer(found); setCustSearch(found.name);
@@ -62,11 +53,11 @@ export const NewSale = () => {
                setWaModal({ customerName: found.name, saleDetails: desc, total: formatCurrency(t), balance: formatCurrency((found.balance||0)+t) });
                speak(`Credit recorded for ${found.name}`);
            } else { 
-               showToast(`Address "${addrWord}" not found`, "error"); 
+               showToast(`Customer ID "${addrWord}" not found`, "error"); 
                speak("Customer not found");
            }
        } else {
-           // Cash
+           // CASH LOGIC
            recordSale({ 
                saleType: "cash", 
                product: p, 
@@ -82,6 +73,17 @@ export const NewSale = () => {
        }
     };
 
+    // Filter customers for dropdown using Name or Address/ID
+    const filteredCustomers = customers.filter(c => {
+        const term = custSearch.toLowerCase();
+        if (c.name.toLowerCase().includes(term)) return true;
+        if (c.address.toLowerCase().includes(term)) return true;
+        // Numeric ID check
+        const firstWord = c.address.trim().split(/\s+/)[0].toLowerCase();
+        const numeric = firstWord.replace(/\D/g, '');
+        return numeric.includes(term);
+    });
+
     return (
         <div className="pb-20 animate-fade-in max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold dark:text-white mb-4">New Sale</h2>
@@ -92,9 +94,20 @@ export const NewSale = () => {
                 </div>
                 {saleType === "credit" && (
                     <div className="mb-4 relative">
-                        <label className="block text-xs dark:text-white mb-1">Customer</label>
-                        <input className="w-full p-3 border rounded dark:bg-gray-800 dark:text-white" placeholder="Search..." value={custSearch} onChange={e=>{setCustSearch(e.target.value); setShowCustList(true);}} />
-                        {showCustList && <div className="absolute z-20 w-full bg-white border shadow-xl max-h-48 overflow-y-auto">{customers.filter(c=>c.name.toLowerCase().includes(custSearch.toLowerCase())).map(c=>(<div key={c.id} onClick={()=>{setSelectedCustomer(c); setCustSearch(c.name); setShowCustList(false)}} className="p-3 hover:bg-gray-100">{c.name}</div>))}</div>}
+                        <label className="block text-xs dark:text-white mb-1">Customer (Name or Address ID)</label>
+                        <input className="w-full p-3 border rounded dark:bg-gray-800 dark:text-white" placeholder="Search by Name, Address or ID (e.g. 340)" value={custSearch} onChange={e=>{setCustSearch(e.target.value); setShowCustList(true);}} />
+                        {showCustList && custSearch && (
+                             <div className="absolute z-20 w-full bg-white border shadow-xl max-h-48 overflow-y-auto dark:bg-gray-800">
+                                 {filteredCustomers.length > 0 ? filteredCustomers.map(c=>(
+                                     <div key={c.id} onClick={()=>{setSelectedCustomer(c); setCustSearch(c.name); setShowCustList(false)}} className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white border-b dark:border-gray-700">
+                                         <div className="font-bold">{c.name}</div>
+                                         <div className="text-xs text-gray-500">{c.address}</div>
+                                     </div>
+                                 )) : (
+                                     <div className="p-3 text-gray-500 text-sm">No match found</div>
+                                 )}
+                             </div>
+                        )}
                     </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 mb-4">

@@ -23,13 +23,13 @@ export const VoiceButton = ({ onCommand, showToast, mode = "cash", inline = fals
     const startListening = () => {
       stopRecognition();
       setIsListening(true); 
-      setDisplayTranscript("Listening... (Say '... and ...')"); 
+      setDisplayTranscript("Listening..."); 
       hasExecutedRef.current = false;
       
       if (!SpeechRecognition) { if(showToast) showToast("Voice Not Supported", "error"); return; }
       
       const recognition = new SpeechRecognition();
-      recognition.continuous = false; // We want one command string
+      recognition.continuous = false; 
       recognition.interimResults = true; 
       recognition.lang = 'en-US';
       
@@ -50,7 +50,7 @@ export const VoiceButton = ({ onCommand, showToast, mode = "cash", inline = fals
          let final = ""; 
          for (let i = e.resultIndex; i < e.results.length; ++i) final += e.results[i][0].transcript;
          
-         // Normalize: lowercase, standard 'and'
+         // Normalize "and"
          const cleaned = final.toLowerCase()
              .replace(/&/g, "and")
              .replace(/\+/g, "and")
@@ -58,59 +58,64 @@ export const VoiceButton = ({ onCommand, showToast, mode = "cash", inline = fals
              
          setDisplayTranscript(final);
 
-         // 1. Split strictly by "and"
-         // This allows complex phrases like "two zero four" to remain in one chunk
+         // STRICT SPLIT by "and"
          const rawParts = cleaned.split(/\sand\s|\sand$|^and\s/);
          const parts = rawParts.map(p => p.trim()).filter(p => p.length > 0);
 
-         let extractedData: any[] = [];
+         // AUTO DETECTION LOGIC
+         let currentMode = mode;
+         if (mode === 'auto' && parts.length > 0) {
+             const firstPart = parts[0];
+             const firstAsNum = parseSpokenNumber(firstPart);
+             const isNum = firstAsNum !== null && typeof firstAsNum === 'number';
+             
+             // Rule: If first number is big (>50) or Alphanumeric -> Credit (Address ID)
+             // Rule: If first number is small (<=50) -> Cash (Quantity)
+             const hasLetters = /[a-z]/i.test(firstPart) && !/zero|one|two|three|four|five|six|seven|eight|nine|ten/i.test(firstPart);
 
-         if (mode === "credit") {
-             // Expectation: [Address, Qty, Variant, Delivery(opt)]
-             // e.g. "204" AND "5" AND "19" AND "20"
-             if (parts.length >= 1) {
-                 // Part 1: Address Identity (e.g. "C two zero four" or "204")
-                 const addrRaw = parts[0];
-                 // If it's pure numbers spoken like "two zero four", parseSpokenNumber handles it
-                 // If it has letters "C two zero four", we need cleanAddressString
-                 let addr = "";
-                 
-                 // Try numeric parse first (for "two zero four")
-                 const numParse = parseSpokenNumber(addrRaw);
-                 if (numParse !== null && String(numParse).length >= 2) {
-                     addr = String(numParse);
-                 } else {
-                     // Alphanumeric
-                     addr = cleanAddressString(addrRaw);
-                 }
-
-                 extractedData.push(addr); // Index 0: Address
-
-                 // Remaining parts should be numbers
-                 for (let i = 1; i < parts.length; i++) {
-                     const val = parseSpokenNumber(parts[i]);
-                     if (val !== null) extractedData.push(val);
-                 }
-             }
-         } else {
-             // Cash Mode
-             // Expectation: [Qty, Variant, Delivery(opt)]
-             // e.g. "5" AND "19" AND "20"
-             for (let i = 0; i < parts.length; i++) {
-                 const val = parseSpokenNumber(parts[i]);
-                 if (val !== null) extractedData.push(val);
+             if (hasLetters || (isNum && (firstAsNum as number) > 50)) {
+                 currentMode = 'credit';
+             } else {
+                 currentMode = 'cash';
              }
          }
 
-         const requiredLen = mode === "credit" ? 3 : 2; // Credit: Addr, Qty, Var. Cash: Qty, Var.
+         let extractedData: any[] = [];
+         
+         if (currentMode === "credit") {
+             // Structure: [Address, Qty, Variant, Delivery?]
+             if (parts.length > 0) extractedData[0] = parts[0]; // Address/ID
+             if (parts.length > 1) extractedData[1] = parseSpokenNumber(parts[1]); // Qty
+             if (parts.length > 2) extractedData[2] = parseSpokenNumber(parts[2]); // Variant
+             if (parts.length > 3) extractedData[3] = parseSpokenNumber(parts[3]); // Delivery
+         } else {
+             // CASH Mode
+             // Structure: [Qty, Variant, Delivery?]
+             if (parts.length > 0) extractedData[0] = parseSpokenNumber(parts[0]); // Qty
+             if (parts.length > 1) extractedData[1] = parseSpokenNumber(parts[1]); // Variant
+             if (parts.length > 2) extractedData[2] = parseSpokenNumber(parts[2]); // Delivery
+         }
 
-         // Debounce execution
-         if (extractedData.length >= requiredLen) { 
-             clearTimeout(silenceTimer.current); 
-             processCommand(extractedData); 
-         } else { 
-             clearTimeout(silenceTimer.current); 
-             silenceTimer.current = setTimeout(() => processCommand(extractedData), 3500); 
+         // Validation Counts
+         const requiredLen = currentMode === "credit" ? 3 : 2; // Min fields needed
+         const maxLen = currentMode === "credit" ? 4 : 3;      // Max fields (with delivery)
+         
+         const validCount = extractedData.filter(x => x !== null && x !== undefined).length;
+
+         clearTimeout(silenceTimer.current);
+
+         // CRITICAL FIX:
+         // If we have the MAXIMUM number of fields (including delivery), execute immediately.
+         // If we have the MINIMUM, WAIT (debounce) to give user time to say "and [delivery]".
+         if (validCount >= maxLen) { 
+             processCommand(extractedData, currentMode); 
+         } else if (validCount >= requiredLen) {
+             // We have enough to process, but user might be adding delivery charges.
+             // Wait 2.5 seconds before processing.
+             silenceTimer.current = setTimeout(() => processCommand(extractedData, currentMode), 2500); 
+         } else {
+             // Incomplete command, keep waiting/listening
+             silenceTimer.current = setTimeout(() => processCommand(extractedData, currentMode), 4000); 
          }
       };
       
@@ -118,32 +123,43 @@ export const VoiceButton = ({ onCommand, showToast, mode = "cash", inline = fals
       recognition.start();
     };
 
-    const processCommand = (data?: any[]) => {
+    const processCommand = (data?: any[], detectedMode?: string) => {
        if (hasExecutedRef.current) return;
        if (recognitionRef.current) recognitionRef.current.stop();
        
-       if (data && data.length >= 2) {
+       const useMode = detectedMode || mode;
+
+       if (data && data.length > 0) {
            hasExecutedRef.current = true;
            
-           if (mode === "credit") {
-               // [Address, Qty, Variant, Delivery?]
+           if (useMode === "credit") {
+               // Expecting: [Address, Qty, Variant, Delivery]
                const addr = data[0]; 
                const qty = data[1]; 
                const vari = String(data[2]); 
-               const del = data.length > 3 ? data[3] : 0;
+               const del = data[3] || 0; 
                
-               onCommandRef.current(qty, vari, del, addr);
+               if (addr && qty && vari) {
+                   onCommandRef.current(qty, vari, del, addr);
+                   setDisplayTranscript("Done!");
+               } else {
+                   setDisplayTranscript("Incomplete Credit Cmd");
+               }
            } else {
-               // [Qty, Variant, Delivery?]
+               // Expecting: [Qty, Variant, Delivery]
                const qty = data[0]; 
                const vari = String(data[1]); 
-               const del = data.length > 2 ? data[2] : 0;
+               const del = data[2] || 0; 
                
-               onCommandRef.current(qty, vari, del);
+               if (qty && vari) {
+                   onCommandRef.current(qty, vari, del);
+                   setDisplayTranscript("Done!");
+               } else {
+                   setDisplayTranscript("Incomplete Cash Cmd");
+               }
            }
-           setDisplayTranscript("Done!");
        } else {
-           setDisplayTranscript("Cmd Incomplete");
+           setDisplayTranscript("No Command");
        }
     };
 
