@@ -1,0 +1,7 @@
+{
+  "name": "Xfinitive Water Manager Cloud",
+  "description": "Comprehensive Water Plant Management System with AI Insights",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

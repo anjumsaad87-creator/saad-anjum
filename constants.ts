@@ -1,0 +1,47 @@
+export const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+export const TEXT_MAP: Record<string, number | string> = {
+  // Numbers
+  'zero': 0, 'oh': 0, 'nil': 0, 'null': 0, 'nough': 0,
+  'one': 1, 'won': 1, 'wan': 1,
+  'two': 2, 'to': 2, 'too': 2, 'toe': 2, 'tu': 2, 'do': 2,
+  'three': 3, 'free': 3, 'tree': 3, 'sri': 3, 'thou': 3, 
+  'four': 4, 'for': 4, 'fore': 4, 'floor': 4, 'flour': 4, 'pour': 4, 'pore': 4, 'door': 4, 'fo': 4, 'foe': 4, 'more': 4,
+  'five': 5, 'hive': 5, 'fife': 5, 'wife': 5, 'live': 5,
+  'six': 6, 'sex': 6, 'sicks': 6, 'secks': 6, 'fix': 6,
+  'seven': 7, 'saven': 7, 'heaven': 7,
+  'eight': 8, 'ate': 8, 'ait': 8, 'hate': 8, 'late': 8,
+  'nine': 9, 'mine': 9, 'nein': 9, 'night': 9, 'fine': 9, 'line': 9,
+  'ten': 10, 'tin': 10, 'hen': 10, 'then': 10, 'den': 10, 'when': 10,
+  'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 
+  'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19, 
+  'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 
+  'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90, 'hundred': 100,
+  
+  // Address Letter Homophones (A-Z)
+  'a': 'A', 'ay': 'A', 'eh': 'A', 'hay': 'A', 'hey': 'A',
+  'b': 'B', 'be': 'B', 'bee': 'B',
+  'c': 'C', 'see': 'C', 'sea': 'C', 'si': 'C',
+  'd': 'D', 'dee': 'D', 'the': 'D', 'da': 'D', 'di': 'D',
+  'e': 'E', 'ee': 'E',
+  'f': 'F', 'eff': 'F', 'if': 'F',
+  'g': 'G', 'jee': 'G', 'gee': 'G',
+  'h': 'H', 'etch': 'H', 'i': 'I', 'eye': 'I',
+  'j': 'J', 'jay': 'J',
+  'k': 'K', 'kay': 'K',
+  'l': 'L', 'el': 'L', 'al': 'L', 'hell': 'L', 'well': 'L',
+  'm': 'M', 'em': 'M',
+  'n': 'N', 'en': 'N',
+  'o': 'O',
+  'p': 'P', 'pee': 'P',
+  'q': 'Q', 'cue': 'Q', 'queue': 'Q',
+  'r': 'R', 'are': 'R', 'our': 'R', 'hour': 'R', 'ar': 'R',
+  's': 'S', 'ess': 'S',
+  't': 'T', 'tee': 'T', 'tea': 'T',
+  'u': 'U', 'you': 'U',
+  'v': 'V', 'vee': 'V',
+  'w': 'W', 'double': 'W',
+  'x': 'X', 'ex': 'X',
+  'y': 'Y', 'why': 'Y',
+  'z': 'Z', 'zee': 'Z', 'zed': 'Z'
+};
