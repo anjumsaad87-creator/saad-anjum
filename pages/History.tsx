@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { formatCurrency } from '../utils';
+import { formatCurrency, formatDateTime, getTodayDatePKT } from '../utils';
 import { Icon, ConfirmModal, Button, Card } from '../components/UI';
 
 export const HistoryPage = () => {
    const { transactions, reverseTransaction } = useAppStore();
    
-   // Default to current month
-   const today = new Date();
-   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-   const lastDay = today.toISOString().split('T')[0];
+   // Default to current month based on PKT
+   const todayStr = getTodayDatePKT();
+   const firstDay = todayStr.substring(0, 8) + '01'; 
+   const lastDay = todayStr;
 
    const [startDate, setStartDate] = useState(firstDay);
    const [endDate, setEndDate] = useState(lastDay);
@@ -37,9 +37,10 @@ export const HistoryPage = () => {
        doc.text("Transaction History", 14, 20);
        doc.setFontSize(10);
        doc.text(`From ${startDate} to ${endDate}`, 14, 26);
+       doc.text(`Generated: ${formatDateTime(new Date().toISOString())}`, 14, 31);
 
        const rows = filteredHistory.map(t => [
-           new Date(t.date).toLocaleString(),
+           formatDateTime(t.date),
            t.description,
            t.type,
            formatCurrency(t.amount),
@@ -48,8 +49,8 @@ export const HistoryPage = () => {
 
        // @ts-ignore
        doc.autoTable({
-           startY: 30,
-           head: [['Date', 'Description', 'Type', 'Amount', 'Status']],
+           startY: 40,
+           head: [['Date (PKT)', 'Description', 'Type', 'Amount', 'Status']],
            body: rows,
        });
 
@@ -80,7 +81,7 @@ export const HistoryPage = () => {
            <div key={t.id} className="bg-white dark:bg-gray-900 p-3 rounded shadow flex justify-between items-center group">
               <div>
                 <p className="font-bold text-sm dark:text-white">{t.description}</p>
-                <p className="text-xs text-gray-500">{new Date(t.date).toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{formatDateTime(t.date)}</p>
               </div>
               <div className="flex items-center gap-3">
                  <span className={`font-bold text-sm ${t.type==='expense'?'text-red-500':'text-green-600'}`}>

@@ -1,13 +1,82 @@
 import { TEXT_MAP } from './constants';
 import { Customer, Product } from './types';
 
+// Helper to get Date Parts strictly in Pakistan Time (Asia/Karachi)
+const getPKTDateParts = (dateObj: Date = new Date()) => {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(dateObj);
+  const getVal = (t: string) => parseInt(parts.find(p => p.type === t)?.value || "0");
+
+  return {
+      year: getVal('year'),
+      month: getVal('month'),
+      day: getVal('day'),
+      hour: getVal('hour'),
+      minute: getVal('minute')
+  };
+};
+
+// Returns YYYY-MM-DD based on PKT, adjusting for 3 AM business cutoff
 export const getBusinessDateKey = (dateObj: Date = new Date()) => {
-  const d = new Date(dateObj);
-  if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0]; 
-  if (d.getHours() < 3) {
-    d.setTime(d.getTime() - (24 * 60 * 60 * 1000));
+  const dObj = new Date(dateObj);
+  if (isNaN(dObj.getTime())) return getTodayDatePKT();
+
+  const pkt = getPKTDateParts(dObj);
+  
+  // Construct a temporary date to handle day subtraction logic easily.
+  // We use the PKT values as "Local" values for this math object.
+  const calcDate = new Date(pkt.year, pkt.month - 1, pkt.day);
+  
+  // Business Logic: 3 AM Cutoff (PKT)
+  // If current PKT hour < 3, it belongs to previous date
+  if (pkt.hour < 3) {
+    calcDate.setDate(calcDate.getDate() - 1);
   }
-  return d.toISOString().split('T')[0];
+  
+  const y = calcDate.getFullYear();
+  const m = String(calcDate.getMonth() + 1).padStart(2, '0');
+  const d = String(calcDate.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+// Returns strict YYYY-MM-DD for today in PKT (Calendar Date)
+export const getTodayDatePKT = () => {
+    const pkt = getPKTDateParts(new Date());
+    const y = pkt.year;
+    const m = String(pkt.month).padStart(2, '0');
+    const d = String(pkt.day).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+// Returns strict Day Name (Monday, Tuesday) in PKT
+export const getCurrentDayNamePKT = () => {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Karachi',
+    weekday: 'long'
+  }).format(new Date());
+};
+
+export const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return new Intl.DateTimeFormat('en-PK', {
+    timeZone: 'Asia/Karachi',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date);
 };
 
 export const formatCurrency = (amount: number = 0) => {

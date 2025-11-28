@@ -3,17 +3,17 @@ import { useAppStore } from '../context/AppContext';
 import { Card, Button, Icon } from '../components/UI';
 import { generateBusinessInsights } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { formatCurrency, getBusinessDateKey } from '../utils';
+import { formatCurrency, getBusinessDateKey, getTodayDatePKT } from '../utils';
 
 export const ReportsPage = () => {
     const { stats, transactions } = useAppStore();
     const [insight, setInsight] = useState("");
     const [loadingInsight, setLoadingInsight] = useState(false);
     
-    // Default to current month
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = today.toISOString().split('T')[0];
+    // Default to current month based on PKT
+    const todayStr = getTodayDatePKT();
+    const firstDay = todayStr.substring(0, 8) + '01'; // YYYY-MM-01
+    const lastDay = todayStr;
 
     const [startDate, setStartDate] = useState(firstDay);
     const [endDate, setEndDate] = useState(lastDay);
@@ -68,7 +68,7 @@ export const ReportsPage = () => {
         
         doc.setFontSize(10);
         doc.text(`Period: ${startDate} to ${endDate}`, 14, 30);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 35);
+        doc.text(`Generated: ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`, 14, 35);
 
         doc.setFontSize(12);
         doc.text("Summary", 14, 45);
@@ -78,7 +78,7 @@ export const ReportsPage = () => {
         doc.text(`Bottles Sold: ${filteredData.bottles}`, 14, 73);
 
         const tableBody = filteredData.filteredTx.map(t => [
-            new Date(t.date).toLocaleDateString(),
+            new Date(t.date).toLocaleDateString('en-PK', { timeZone: 'Asia/Karachi' }),
             t.description,
             t.type.toUpperCase(),
             formatCurrency(t.amount)

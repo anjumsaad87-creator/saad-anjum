@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { getBusinessDateKey, formatCurrency, speak, findMatchingCustomer, findProductByKeyword } from '../utils';
-import { DAYS_OF_WEEK } from '../constants';
-import { Icon, Button, ConfirmModal } from '../components/UI';
+import { getBusinessDateKey, formatCurrency, speak, findMatchingCustomer, findProductByKeyword, formatDateTime, getCurrentDayNamePKT } from '../utils';
+import { Icon, Button } from '../components/UI';
 import { StatBox } from '../components/StatBox';
 import { VoiceButton } from '../components/VoiceButton';
 
@@ -16,7 +15,7 @@ const ReversalsModal = ({ onClose }: { onClose: () => void }) => {
                      {reversedTransactions.map(t => (
                          <div key={t.id} className="p-2 border rounded dark:border-gray-700">
                              <p className="text-sm font-bold text-red-500">{t.description}</p>
-                             <p className="text-xs text-gray-500">{new Date(t.date).toLocaleString()} | {formatCurrency(t.amount)}</p>
+                             <p className="text-xs text-gray-500">{formatDateTime(t.date)} | {formatCurrency(t.amount)}</p>
                          </div>
                      ))}
                      {reversedTransactions.length === 0 && <p className="text-center text-gray-500">No reversals.</p>}
@@ -29,10 +28,12 @@ const ReversalsModal = ({ onClose }: { onClose: () => void }) => {
 
 export const Dashboard = ({ setView }: any) => {
     const { stats, transactions, products, customers, recordSale, showToast } = useAppStore();
-    const [date, setDate] = useState(getBusinessDateKey());
+    const [date, setDate] = useState(getBusinessDateKey()); // Use PKT Date Key
     const [showReverseModal, setShowReverseModal] = useState(false);
     
-    const dayName = DAYS_OF_WEEK[new Date().getDay()];
+    // Get Day Name strictly in PKT
+    const dayName = getCurrentDayNamePKT();
+    
     const tasksToday = customers.filter(c => c.schedule?.[dayName]);
     const doneCount = tasksToday.filter(c => {
         const txDateKey = getBusinessDateKey();

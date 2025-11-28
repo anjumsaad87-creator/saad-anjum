@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { getBusinessDateKey, formatCurrency } from '../utils';
-import { DAYS_OF_WEEK } from '../constants';
+import { getBusinessDateKey, formatCurrency, getCurrentDayNamePKT } from '../utils';
 import { Button, WhatsAppModal, Icon } from '../components/UI';
 
 export const TasksPage = () => {
@@ -10,8 +9,9 @@ export const TasksPage = () => {
     const [waModal, setWaModal] = useState<any>(null);
     const [selectedIds, setSelectedIds] = useState(new Set()); 
     
-    const today = new Date();
-    const dayName = DAYS_OF_WEEK[today.getDay()];
+    // Get Day Name strictly in PKT
+    const dayName = getCurrentDayNamePKT();
+    
     const dateKey = getBusinessDateKey();
     const tasks = customers.filter(c => c.schedule?.[dayName]);
     const sortedTasks = tasks.sort((a,b) => a.name.localeCompare(b.name));
@@ -19,7 +19,7 @@ export const TasksPage = () => {
     
     const isDone = (cid: string) => transactions.some(t => {
         const d = new Date(t.date);
-        return !t.isDeleted && t.type==='sale' && t.customerId === cid && !isNaN(d.getTime()) && getBusinessDateKey(d) === dateKey;
+        return !t.isDeleted && t.type==='sale' && t.customerId === cid && t.isTask === true && !isNaN(d.getTime()) && getBusinessDateKey(d) === dateKey;
     });
 
     const toggleSelect = (id: string) => {
@@ -65,7 +65,8 @@ export const TasksPage = () => {
            deliveryCharge: delAmt, 
            customerId: c.id, 
            amount: total, 
-           description: descDetails // recordSale will prepend "Credit Sale (Name): "
+           description: descDetails, // recordSale will prepend "Credit Sale (Name): "
+           isTask: true // MARK AS TASK
         });
         
         showToast(`Task Done: ${c.name}`, "success");
