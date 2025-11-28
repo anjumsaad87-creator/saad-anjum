@@ -1,5 +1,5 @@
 import { TEXT_MAP } from './constants';
-import { Customer } from './types';
+import { Customer, Product } from './types';
 
 export const getBusinessDateKey = (dateObj: Date = new Date()) => {
   const d = new Date(dateObj);
@@ -68,36 +68,34 @@ export const cleanAddressString = (str: string) => {
 };
 
 // NEW: Smart Customer Matcher
-// Checks Name, Address, and specifically the "Address ID" (First word of address)
-// Handles "340" matching "C340"
 export const findMatchingCustomer = (customers: Customer[], searchTerm: string) => {
     if (!searchTerm) return null;
     const term = searchTerm.toLowerCase().trim();
 
     return customers.find(c => {
-        // 1. Match Name
         if (c.name.toLowerCase().includes(term)) return true;
-
-        // 2. Match Full Address
         if (c.address.toLowerCase().includes(term)) return true;
-
-        // 3. Match Address ID (First Word)
-        // e.g. Address "C340 Block 2" -> ID "C340"
         const firstWord = c.address.trim().split(/\s+/)[0].toLowerCase();
-        
-        // Exact ID match: "c340" === "c340"
         if (firstWord === term) return true;
-        
-        // Starts with match: "c340" starts with "c3"
         if (firstWord.startsWith(term)) return true;
-
-        // Numeric Match: User types "340", ID is "C340". 
-        // Strip letters from ID: "340" === "340"
         const numericId = firstWord.replace(/\D/g, '');
         if (numericId === term && numericId.length > 0) return true;
-
         return false;
     });
+};
+
+// NEW: Smart Product Matcher (Name or Keywords)
+export const findProductByKeyword = (products: Product[], searchTerm: string) => {
+    if (!searchTerm) return null;
+    const term = searchTerm.toLowerCase().trim();
+    
+    // Priority 1: Exact Keyword Match (Voice Code)
+    // strict check to ensure "1" doesn't match "19"
+    const exactCode = products.find(p => p.keywords && p.keywords.trim() === term);
+    if (exactCode) return exactCode;
+
+    // Priority 2: Name contains term (Fallback)
+    return products.find(p => p.name.toLowerCase().includes(term));
 };
 
 // Filter function for lists
@@ -107,10 +105,8 @@ export const filterCustomers = (customers: Customer[], searchTerm: string) => {
     return customers.filter(c => {
         if (c.name.toLowerCase().includes(term)) return true;
         if (c.address.toLowerCase().includes(term)) return true;
-        
         const firstWord = c.address.trim().split(/\s+/)[0].toLowerCase();
         const numericId = firstWord.replace(/\D/g, '');
-        
         return firstWord.includes(term) || (numericId === term && numericId.length > 0);
     });
 };

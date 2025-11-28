@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { getBusinessDateKey, formatCurrency, speak } from '../utils';
+import { getBusinessDateKey, formatCurrency, speak, findMatchingCustomer, findProductByKeyword } from '../utils';
 import { DAYS_OF_WEEK } from '../constants';
 import { Icon, Button, ConfirmModal } from '../components/UI';
 import { StatBox } from '../components/StatBox';
@@ -52,8 +52,8 @@ export const Dashboard = ({ setView }: any) => {
     Object.values(dStats.variantMap).forEach((v: any) => { if(v.count > max) { max=v.count; topVar=v; }});
 
    const handleVoiceCommand = (qty: any, variantKey: any, delivery: any, addrWord: any) => {
-      // Find Product (Case Insensitive)
-      const p = products.find(x => x.name.toLowerCase().includes(String(variantKey).toLowerCase()));
+      // Find Product (Name OR Keywords)
+      const p = findProductByKeyword(products, String(variantKey));
       
       if (!p) {
           showToast(`Variant "${variantKey}" not found.`, "error");
@@ -69,16 +69,7 @@ export const Dashboard = ({ setView }: any) => {
       if (addrWord) {
           // CREDIT MODE
           // Search customer by Address ID (Strict)
-          const searchKey = String(addrWord).toLowerCase();
-          const found = customers.find(c => {
-              // Address ID matching logic (Same as findMatchingCustomer roughly)
-              const firstWord = c.address.trim().split(/\s+/)[0].toLowerCase();
-              const numericId = firstWord.replace(/\D/g, '');
-              
-              // If user said "340", match "c340" (via numericId) or "340"
-              // If user said "c340", match "c340"
-              return firstWord === searchKey || (numericId === searchKey && numericId.length > 0);
-          });
+          const found = findMatchingCustomer(customers, String(addrWord));
 
           if (found) {
               recordSale({ 
@@ -137,7 +128,6 @@ export const Dashboard = ({ setView }: any) => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             {/* Main Boxes with Beautiful Outline - Forced Styles with !important to ensure visibility */}
              <StatBox 
                 title={`Daily Collection (${date})`} 
                 value={formatCurrency(dStats.collection)} 

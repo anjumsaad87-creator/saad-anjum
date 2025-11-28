@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../context/AppContext';
-import { formatCurrency, speak, findMatchingCustomer } from '../utils';
+import { formatCurrency, speak, findMatchingCustomer, findProductByKeyword } from '../utils';
 import { Card, Button, WhatsAppModal } from '../components/UI';
 import { VoiceButton } from '../components/VoiceButton';
 
@@ -20,9 +20,11 @@ export const NewSale = () => {
     const total = (product?.price || 0) * qty + (isDelivery ? Number(deliveryCharge) : 0);
 
     const handleVoice = (q: any, variantKey: any, del: any, addrWord: any) => {
-       const p = products.find(x => x.name.toLowerCase().includes(String(variantKey).toLowerCase()));
+       // Search by Name or Keywords
+       const p = findProductByKeyword(products, String(variantKey));
+       
        if (!p) {
-           showToast(`Variant "${variantKey}" not found`, "error");
+           showToast(`Variant Code "${variantKey}" not found`, "error");
            speak("Product not found");
            return;
        }
@@ -111,7 +113,16 @@ export const NewSale = () => {
                     </div>
                 )}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                     <div><label className="block text-sm font-medium mb-1 dark:text-gray-300">Product</label><select className="w-full p-3 border rounded-lg dark:bg-gray-800 dark:text-white" value={productId} onChange={e=>setProductId(e.target.value)}>{products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+                     <div>
+                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Product</label>
+                        <select className="w-full p-3 border rounded-lg dark:bg-gray-800 dark:text-white" value={productId} onChange={e=>setProductId(e.target.value)}>
+                            {products.map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} {p.keywords ? `(Code: ${p.keywords})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                     </div>
                      <div><label className="block text-sm font-medium mb-1 dark:text-gray-300">Qty</label><div className="flex"><button onClick={()=>setQty(q=>q>1?q-1:1)} className="p-3 bg-gray-200 dark:bg-gray-700 rounded-l">-</button><input type="number" className="w-full text-center border-y dark:bg-gray-800 dark:text-white" value={qty} onChange={e=>setQty(Math.max(1, Number(e.target.value)||1))} /><button onClick={()=>setQty(q=>q+1)} className="p-3 bg-gray-200 dark:bg-gray-700 rounded-r">+</button></div></div>
                 </div>
                 <div className="mb-6 bg-orange-50 dark:bg-orange-900/20 p-3 rounded flex items-center justify-between"><label className="flex items-center gap-2 cursor-pointer dark:text-white"><input type="checkbox" checked={isDelivery} onChange={e=>setIsDelivery(e.target.checked)} className="w-4 h-4" />Delivery?</label>{isDelivery && <input type="number" placeholder="Amt" className="w-20 p-2 border rounded dark:bg-gray-800 dark:text-white" value={deliveryCharge} onChange={e=>setDeliveryCharge(e.target.value)} />}</div>

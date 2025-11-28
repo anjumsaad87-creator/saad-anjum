@@ -18,7 +18,7 @@ interface AppContextType {
   reverseTransaction: (tx: Transaction) => void;
   addCustomer: (name: string, phone: string, address: string, initialBalance?: number) => void;
   deleteCustomer: (c: Customer, isBadDebt: boolean) => void;
-  addProduct: (name: string, price: string | number) => void;
+  addProduct: (name: string, price: string | number, keywords?: string) => void;
   deleteProduct: (id: string) => void;
   updateSchedule: (cid: string, schedule: any) => void;
   importCustomers: (dataRows: any[]) => number;
@@ -153,11 +153,18 @@ export const AppProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const deleteCustomer = (c: Customer, isBadDebt: boolean) => {
-    if (isBadDebt) recordExpense(c.balance, 'Bad Debt');
+    // If Bad Debt, record it as an expense so it affects Income/Expense reports
+    if (isBadDebt && c.balance > 0) {
+        recordExpense(c.balance, 'Bad Debt');
+    }
     db.collection("customers").doc(c.id).delete();
   };
 
-  const addProduct = (name: string, price: string | number) => db.collection("products").add({ name, price: parseFloat(String(price)) });
+  const addProduct = (name: string, price: string | number, keywords: string = "") => {
+    if (!name.trim() || !price) return; // Validation to prevent empty products
+    db.collection("products").add({ name, price: parseFloat(String(price)), keywords });
+  };
+  
   const deleteProduct = (id: string) => db.collection("products").doc(id).delete();
 
   const reverseTransaction = (tx: Transaction) => {
@@ -198,13 +205,15 @@ export const AppProvider = ({ children }: React.PropsWithChildren<{}>) => {
         monthStats[mKey].collection += amt;
       }
       if (t.type === 'expense') {
+        // ALWAYS add to monthly total expenses (so Net Income = Collection - Expense includes Bad Debt)
+        monthStats[mKey].expenses += amt;
+
         if (t.category === 'Bad Debt') {
           badDebtAllTime += amt;
           monthStats[mKey].badDebt += amt;
         } else {
           expensesAllTime += amt;
           monthStats[mKey].cashExpenses += amt;
-          monthStats[mKey].expenses += amt;
         }
       }
       if (t.type === 'sale') {
